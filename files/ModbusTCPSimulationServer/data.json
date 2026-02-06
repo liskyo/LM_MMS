@@ -1,0 +1,192 @@
+{
+    "holdingRegisters": [
+        {
+            "name": "ppm",
+            "value": 29135
+        },
+        {
+            "name": "pressure",
+            "value": 0.32
+        },
+        {
+            "name": "liquidFlow",
+            "value": 30
+        },
+        {
+            "name": "airFlow",
+            "value": 300
+        }
+    ],
+    "coils": [
+        {
+            "name": "emo",
+            "value": false
+        },
+        {
+            "name": "liquidTopLimit",
+            "value": false
+        },
+        {
+            "name": "liquidBottomLimit",
+            "value": true
+        },
+        {
+            "name": "liquidPump",
+            "value": false
+        },
+        {
+            "name": "liquidOutletSwitch",
+            "value": false
+        },
+        {
+            "name": "airPump",
+            "value": false
+        },
+        {
+            "name": "airPumpOverload",
+            "value": false
+        },
+        {
+            "name": "doorLock1",
+            "value": true
+        },
+        {
+            "name": "doorLock2",
+            "value": true
+        },
+        {
+            "name": "robotOverload",
+            "value": false
+        },
+        {
+            "name": "robotLoadAbnormal",
+            "value": false
+        },
+        {
+            "name": "liquidLeak",
+            "value": false
+        },
+        {
+            "name": "touchSensorTR",
+            "value": false
+        },
+        {
+            "name": "touchSensorTL",
+            "value": false
+        },
+        {
+            "name": "touchSensorBR",
+            "value": false
+        },
+        {
+            "name": "touchSensorBL",
+            "value": false
+        },
+        {
+            "name": "maintain",
+            "value": false
+        },
+        {
+            "name": "reset",
+            "value": false
+        }
+    ],
+    "tankSlots": [
+        {
+            "name": "tankSlot1",
+            "value": false
+        },
+        {
+            "name": "tankSlot2",
+            "value": false
+        },
+        {
+            "name": "tankSlot3",
+            "value": false
+        },
+        {
+            "name": "tankSlot4",
+            "value": true
+        },
+        {
+            "name": "tankSlot5",
+            "value": false
+        },
+        {
+            "name": "tankSlot6",
+            "value": false
+        },
+        {
+            "name": "tankSlot7",
+            "value": false
+        },
+        {
+            "name": "tankSlot8",
+            "value": false
+        },
+        {
+            "name": "tankSlot9",
+            "value": false
+        },
+        {
+            "name": "tankSlot10",
+            "value": true
+        },
+        {
+            "name": "tankSlot11",
+            "value": false
+        },
+        {
+            "name": "tankSlot12",
+            "value": true
+        },
+        {
+            "name": "tankSlot13",
+            "value": false
+        },
+        {
+            "name": "tankSlot14",
+            "value": false
+        },
+        {
+            "name": "tankSlot15",
+            "value": false
+        },
+        {
+            "name": "tankSlot16",
+            "value": false
+        },
+        {
+            "name": "tankSlot17",
+            "value": false
+        },
+        {
+            "name": "tankSlot18",
+            "value": false
+        },
+        {
+            "name": "tankSlot19",
+            "value": false
+        }
+    ],
+    "mmsSlots": [
+        {"name": "mmsSlot1", "value": false},
+        {"name": "mmsSlot2", "value": true},
+        {"name": "mmsSlot3", "value": false},
+        {"name": "mmsSlot4", "value": false},
+        {"name": "mmsSlot5", "value": true},
+        {"name": "mmsSlot6", "value": false},
+        {"name": "mmsSlot7", "value": false},
+        {"name": "mmsSlot8", "value": false},
+        {"name": "mmsSlot9", "value": false},
+        {"name": "mmsSlot10", "value": false},
+        {"name": "mmsSlot11", "value": false},
+        {"name": "mmsSlot12", "value": false},
+        {"name": "mmsSlot13", "value": false},
+        {"name": "mmsSlot14", "value": false},
+        {"name": "mmsSlot15", "value": false},
+        {"name": "mmsSlot16", "value": false},
+        {"name": "mmsSlot17", "value": false},
+        {"name": "mmsSlot18", "value": false}
+    ]
+}

@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=EVMMS Electron App
+Exec=/home/user/weSolutions_MMS_EV/dist_electron/mms-ev-electron-0.1.0.AppImage --fullscreen
+Terminal=false
+X-GNOME-Autostart-enabled=true
