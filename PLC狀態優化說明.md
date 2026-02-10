@@ -112,35 +112,63 @@ export const mainFunction = (isDevelopment, app, ipcMain, win) => {
 }
 ```
 
-### 4. 前端 Vue 接收範例
+### 4. 前端 Vue 實作 (`MainFunction.vue` & `DockServer.vue`)
 
-在元件中監聽事件，並記得在銷毀前移除監聽。
+這兩個檔案是主要顯示槽位狀態的 UI 元件。主要修改內容為將 `setInterval` 移除，改為監聽 IPC 事件。
+
+**修改重點：**
+1.  **移除 Polling**：註解掉原本每 500ms 呼叫一次 `getMMSlots()` 的計時器。
+2.  **新增監聽**：在 `mounted` 新增 `ipcRenderer.on`。
+3.  **移除監聽**：在 `beforeDestroy` 新增 `ipcRenderer.removeListener`。
+4.  **共用邏輯**：兩個元件都使用相同的 `main/slots-update` 事件源。
 
 ```javascript
-// 任意 Vue Component
-import { ipcRenderer } from 'electron'
+// src/components/MainFunction.vue & src/components/DockServer.vue
 
-export default {
-  data() {
-    return {
-      tankSlots: [],
-      mmSlots: []
-    }
-  },
-  mounted() {
-    // [監聽] 接收後端主動推播
-    ipcRenderer.on('main/slots-update', this.onSlotsUpdate)
-  },
-  beforeDestroy() {
-    // [重要] 移除監聽，避免記憶體洩漏 (Memory Leak)
-    ipcRenderer.removeListener('main/slots-update', this.onSlotsUpdate)
-  },
-  methods: {
-    onSlotsUpdate(event, data) {
-      console.log('收到 PLC 狀態變更:', data)
-      this.tankSlots = data.tank
-      this.mmSlots = data.mm
-    }
-  }
+mounted() {
+  // [移除] 舊的輪詢
+  // this.timer = setInterval(() => { this.getMMSlots() }, 500)
+
+  // [新增] 監聽事件
+  ipcRenderer.on('main/slots-update', this.onSlotsUpdate)
+},
+beforeDestroy() {
+  // [新增] 移除監聽
+  ipcRenderer.removeListener('main/slots-update', this.onSlotsUpdate)
 }
 ```
+
+---
+
+## 測試與驗證
+
+為了在沒有真實硬體的環境下驗證邏輯，專案中新增了一個獨立測試腳本。
+
+### 新增 `test_logic_standalone.js`
+
+此腳本模擬了 `modules.js` 中的核心邏輯，驗證以下場景：
+1.  **初始掃描**：確認第一次讀取會觸發 `Changed=true`。
+2.  **無變動**：確認數值未變時回傳 `Changed=false`。
+3.  **狀態變動**：模擬 Modbus 回傳值改變，確認能偵測到差異。
+4.  **恢復穩態**：再次讀取新值，確認不再重複觸發。
+
+**執行方式：**
+```bash
+node test_logic_standalone.js
+```
+
+---
+
+## 修改檔案清單總整
+
+本次優化共涉及以下檔案：
+
+| 檔案路徑 | 分類 | 說明 |
+| :--- | :--- | :--- |
+| `src/electron/modules.js` | **核心讀取邏輯** | 新增 `ScanAllSlots`，用於合併讀取與實作差異比對。 |
+| `src/background.js` | **視窗傳遞** | 將 `BrowserWindow` 實例傳給 `mainFunction`，開啟推播能力。 |
+| `src/electron/entrypoint.js` | **推播迴圈** | 在主迴圈呼叫 `ScanAllSlots`，若有變動則透過 `win.webContents` 推播。 |
+| `src/components/MainFunction.vue` | **前端監聽** | 主畫面 UI，接收並更新 Tank 與 MMS 槽位顯示。 |
+| `src/components/DockServer.vue` | **前端監聽** | Dock 伺服器 UI，接收並更新對應的槽位顯示。 |
+| `test_logic_standalone.js` | **測試腳本** | 獨立的 Node.js 腳本，用於驗證後端邏輯正確性。 |
+

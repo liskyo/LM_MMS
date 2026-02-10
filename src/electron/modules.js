@@ -38,6 +38,8 @@ export class GPIO {
       reset: false,
       idlePLC: true,
     }
+    // [New] Cache for diffing
+    this.lastSlotsState = { tank: [], mm: [] }
   }
 
   dwordEncoder(floatValues) {
@@ -202,6 +204,36 @@ export class GPIO {
   // Get() {
   //   return this.values
   // }
+
+  // [New] Efficient Batch Scan + Diffing
+  async ScanAllSlots() {
+    try {
+      // Read 60 coils starting from 301 (covers Tank 301-318 and MM 341-358)
+      const response = await this.client.readCoils(301, 60)
+      const bits = response.response.body.valuesAsArray.map(value => Boolean(value))
+
+      if (bits.length >= 58) {
+        // Slice data: Tank (first 18), MM (starts at index 40, length 18)
+        const currentTank = bits.slice(0, 18)
+        const currentMM = bits.slice(40, 58)
+
+        // Diffing using JSON stringify for speed
+        const isChanged = 
+          JSON.stringify(currentTank) !== JSON.stringify(this.lastSlotsState.tank) || 
+          JSON.stringify(currentMM) !== JSON.stringify(this.lastSlotsState.mm)
+
+        if (isChanged) {
+          this.lastSlotsState = { tank: currentTank, mm: currentMM }
+          return { changed: true, data: this.lastSlotsState }
+        }
+      }
+    } catch (error) {
+      if (this.logger) {
+        this.logger.log('error', `ScanAllSlots failed: ${error}`, { type: 'modules'})
+      }
+    }
+    return { changed: false }
+  }
 
   async GetMMSlotsStatus() {
     let returnSlotsStatus = []

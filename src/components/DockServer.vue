@@ -532,15 +532,46 @@ export default {
       }
       this.action.ccdRecalibration.loading = false
     }
+    onSlotsUpdate(event, data) {
+        // Dock slots maps to tank data (first 8)
+        if (data.tank && data.tank.length > 0) {
+            this.slots.dock.forEach(item => {
+                // item.id is 1-based, array is 0-based
+                if (item.id - 1 < data.tank.length) {
+                    item.inUse = data.tank[item.id - 1]
+                }
+            })
+        }
+        // MMS slots
+        if (data.mm && data.mm.length > 0) {
+            this.slots.mms.forEach(item => {
+                if (item.id - 1 < data.mm.length) {
+                    item.inUse = data.mm[item.id - 1]
+                    
+                    // Check direction logic (from getMMSlots)
+                    if (item.id === this.select.mmsSlot && this.select.direction === 'mms' && item.inUse)
+                        this.select.mmsSlot = null
+                    if (item.id === this.select.mmsSlot && this.select.direction === 'dock' && !item.inUse)
+                        this.select.mmsSlot = null
+                }
+            })
+        }
+    },
   },
   mounted() {
-    this.timer = setInterval(() => {
-      this.getMMSlots()
-    }, 500)
+    // this.timer = setInterval(() => {
+    //   this.getMMSlots()
+    // }, 500)
+    
+    // [New] Listen to PLC status push
+    ipcRenderer.on('main/slots-update', this.onSlotsUpdate)
   },
   beforeDestroy() {
     clearInterval(this.timer)
+    // [New] Remove listener
+    ipcRenderer.removeListener('main/slots-update', this.onSlotsUpdate)
   }
+}
 }
 </script>
 

@@ -1363,17 +1363,43 @@ export default {
     //   }
     //   this.dialog.closeBtn.disabled = false
     // }
+    onSlotsUpdate(event, data) {
+      if (data.tank && data.tank.length > 0) {
+        this.slots.tank.forEach((item, idx) => {
+          if (idx < data.tank.length) item.inUse = data.tank[idx]
+        })
+      }
+      if (data.mm && data.mm.length > 0) {
+        this.slots.mms.forEach((item, idx) => {
+          if (idx < data.mm.length) {
+             item.inUse = data.mm[idx]
+
+             // Check direction logic (from getMMSlots)
+             if (item.id === this.select.mmsSlot && this.select.direction === 'mms' && item.inUse)
+               this.select.mmsSlot = null
+             if (item.id === this.select.mmsSlot && this.select.direction === 'tank' && !item.inUse)
+               this.select.mmsSlot = null
+          }
+        })
+      }
+    },
   },
 
   mounted() {
     this.getLiquidLevel()
-    this.timer = setInterval(() => { this.getMMSlots() }, 500)
+    // this.timer = setInterval(() => { this.getMMSlots() }, 500)
     this.liquidLevelTimer = setInterval(() => { this.getLiquidLevel() }, 5000)
+
+    // [New] Listen to PLC status push
+    ipcRenderer.on('main/slots-update', this.onSlotsUpdate)
   },
   beforeDestroy() {
     clearInterval(this.timer)
     clearInterval(this.liquidLevelTimer)
+    // [New] Remove listener
+    ipcRenderer.removeListener('main/slots-update', this.onSlotsUpdate)
   }
+}
 }
 </script>
 

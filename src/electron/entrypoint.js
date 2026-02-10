@@ -6,7 +6,7 @@ import axios from 'axios';
 import { GPIO } from './modules'
 import { Interlock } from './interlock'
 
-export const mainFunction = (isDevelopment, app, ipcMain) => {
+export const mainFunction = (isDevelopment, app, ipcMain, win) => {
   const logFilename = (isDevelopment) ? path.join(__dirname, 'main.log') : '/home/user/weSolutions_MMS_EV/logs/main.log'
   // console.log(logFilename)
 
@@ -36,7 +36,7 @@ export const mainFunction = (isDevelopment, app, ipcMain) => {
 
   gpio.connect()
   logger.log("info", "StartUp sequence has been completed")
-  
+
   mainHandler(app, ipcMain, gpio, interlock)
   mainFunctionHandler(ipcMain, gpio)
   pipeSystemHandler(ipcMain, gpio)
@@ -49,14 +49,20 @@ export const mainFunction = (isDevelopment, app, ipcMain) => {
   setInterval(async () => {
     // const values = await gpio.SimLoop()
     const values = await gpio.Loop()
-    
+
     if (values)
       interlock.Check(values)
+
+    // [New] Optimized Slot Scanning & Push
+    const slotsResult = await gpio.ScanAllSlots()
+    if (slotsResult.changed && win && !win.isDestroyed()) {
+      win.webContents.send('main/slots-update', slotsResult.data)
+    }
   }, 100)
 }
 
 const mainHandler = (app, ipcMain, gpio, interlock) => {
-  ipcMain.on("main/poweroff", async() => {
+  ipcMain.on("main/poweroff", async () => {
     console.log("global poweroff button has been trigger")
     app.quit()
   })
@@ -65,7 +71,7 @@ const mainHandler = (app, ipcMain, gpio, interlock) => {
     console.log("global reset button has been trigger");
     return await gpio.ActionGlobalReset();   // 回傳 true / false
   });
-  ipcMain.handle("main/get", async() => {
+  ipcMain.handle("main/get", async () => {
     const pressurized = await gpio.ActionWaitForAirTightness()
 
     return {
@@ -80,7 +86,7 @@ const mainHandler = (app, ipcMain, gpio, interlock) => {
       reset: gpio.values.reset,
     }
   })
-  ipcMain.handle("main/getAlert", async() => {
+  ipcMain.handle("main/getAlert", async () => {
     return interlock.GetAlert()
   })
   ipcMain.handle("main/changeMode", async (_event, enable) => {
@@ -90,92 +96,92 @@ const mainHandler = (app, ipcMain, gpio, interlock) => {
 }
 
 const mainFunctionHandler = (ipcMain, gpio) => {
-  ipcMain.handle("mainFunction/getMMSlots", async() => {
+  ipcMain.handle("mainFunction/getMMSlots", async () => {
     return await gpio.GetMMSlotsStatus()
   })
 
-  ipcMain.handle("mainFunction/getTankSlots", async() => {
+  ipcMain.handle("mainFunction/getTankSlots", async () => {
     return await gpio.GetTankSlotsStatus()
   })
 
-  ipcMain.handle("mainFunction/getLiquidLevel", async() => {
+  ipcMain.handle("mainFunction/getLiquidLevel", async () => {
     const tankLiquidHeight = Number(gpio.values.liquidFlow) || 0
     const targetLiquidHeight = 620
     return { tankLiquidHeight, targetLiquidHeight }
   })
 
-  ipcMain.handle("mainFunction/check/robotIsEmpty", async() => {
+  ipcMain.handle("mainFunction/check/robotIsEmpty", async () => {
     return await gpio.GetRobotIsEmpty()
   })
 
-  ipcMain.handle("mainFunction/action/startReplenish", async() => {
+  ipcMain.handle("mainFunction/action/startReplenish", async () => {
     return await gpio.ActionLiquidOutletSwitch('open') && gpio.ActionLiquidPump('on')
   })
 
-  ipcMain.handle("mainFunction/action/endReplenish", async() => {
+  ipcMain.handle("mainFunction/action/endReplenish", async () => {
     return await gpio.ActionLiquidPump('off') && gpio.ActionLiquidOutletSwitch('close')
   })
 
-  ipcMain.handle("mainFunction/action/robot/return2origin", async() => {
+  ipcMain.handle("mainFunction/action/robot/return2origin", async () => {
     return await gpio.ActionRobotReturn2Origin()
   })
 
-  ipcMain.handle("mainFunction/action/robot/move2slot", async(_, args) => {
+  ipcMain.handle("mainFunction/action/robot/move2slot", async (_, args) => {
     return await gpio.ActionRobotMove2Slot(args.slotId)
   })
 
-  ipcMain.handle("mainFunction/action/robot/installServer", async() => {
+  ipcMain.handle("mainFunction/action/robot/installServer", async () => {
     return await gpio.ActionRobotInstallServer()
   })
 
-  ipcMain.handle("mainFunction/action/robot/uninstallServer", async() => {
+  ipcMain.handle("mainFunction/action/robot/uninstallServer", async () => {
     return await gpio.ActionRobotUninstallServer()
   })
 
-  ipcMain.handle("mainFunction/action/robot/openWireCover", async() => {
+  ipcMain.handle("mainFunction/action/robot/openWireCover", async () => {
     return await gpio.ActionRobotOpenWireCover()
   })
 
-  ipcMain.handle("mainFunction/action/robot/closeWireCover", async() => {
+  ipcMain.handle("mainFunction/action/robot/closeWireCover", async () => {
     return await gpio.ActionRobotCloseWireCover()
   })
 
-  ipcMain.handle("mainFunction/action/robot/scanTankSlots", async() => {
+  ipcMain.handle("mainFunction/action/robot/scanTankSlots", async () => {
     return await gpio.ActionRobotScanTankSlots()
   })
 
-  ipcMain.handle("mainFunction/action/extendActuator", async() => {
+  ipcMain.handle("mainFunction/action/extendActuator", async () => {
     return await gpio.ActionExtendActuator()
   })
 
-  ipcMain.handle("mainFunction/action/retractActuator", async() => {
+  ipcMain.handle("mainFunction/action/retractActuator", async () => {
     return await gpio.ActionRetractActuator()
   })
 
-  ipcMain.handle("mainFunction/action/robot/recalibration", async(_, args) => {
+  ipcMain.handle("mainFunction/action/robot/recalibration", async (_, args) => {
     return await gpio.ActionRobotCCDMarkCorrection(args.tankId)
   })
 
   //todo 新增
-  ipcMain.handle("mainFunction/action/airPump", async(_, args) => {
+  ipcMain.handle("mainFunction/action/airPump", async (_, args) => {
     return await gpio.ActionAirPump(args.action)
   })
 
   //todo 新增
   ipcMain.handle("mainFunction/action/waitForAirTightness", async () => {
     return await gpio.ActionWaitForAirTightness();
-  });  
+  });
 
   //todo 新增 偵測氟化液濃度
   ipcMain.handle("mainFunction/action/waitForConcentrationDecrease", async () => {
     return await gpio.ActionWaitForConcentrationDecrease();
   });
-  
+
 
 }
 
 const pipeSystemHandler = (ipcMain, gpio) => {
-  ipcMain.handle("pipeSystem/get", async() => {
+  ipcMain.handle("pipeSystem/get", async () => {
     return {
       liquidFlow: gpio.values.liquidFlow,
       airFlow: gpio.values.airFlow,
@@ -186,53 +192,53 @@ const pipeSystemHandler = (ipcMain, gpio) => {
       airPumpOpened: gpio.values.airPumpOpened,
     }
   })
-  
-  ipcMain.on("pipeSystem/setLiquidOutlet", async(_, args) => {
+
+  ipcMain.on("pipeSystem/setLiquidOutlet", async (_, args) => {
     console.log("set liquid-outlet", args)
     gpio.ActionLiquidOutletSwitch(args)
   })
 
-  ipcMain.on("pipeSystem/setLiquidPump", async(_, args) => {
+  ipcMain.on("pipeSystem/setLiquidPump", async (_, args) => {
     console.log("set liquid-pump", args)
     gpio.ActionLiquidPump(args)
   })
-  
-  ipcMain.on("pipeSystem/setAirPump", async(_, args) => {
+
+  ipcMain.on("pipeSystem/setAirPump", async (_, args) => {
     console.log("set air-pump", args)
     gpio.ActionAirPump(args)
   })
 }
 
 const manualOperation = (ipcMain, gpio) => {
-  ipcMain.handle("manualOperation/action/robot/return2origin", async() => {
+  ipcMain.handle("manualOperation/action/robot/return2origin", async () => {
     return await gpio.ActionRobotReturn2Origin()
   })
 
-  ipcMain.handle("manualOperation/action/robot/move2slot", async(_, args) => {
+  ipcMain.handle("manualOperation/action/robot/move2slot", async (_, args) => {
     return await gpio.ActionRobotMove2Slot(args.slotId)
   })
 
-  ipcMain.handle("manualOperation/action/robot/openWireCover", async() => {
+  ipcMain.handle("manualOperation/action/robot/openWireCover", async () => {
     return await gpio.ActionRobotOpenWireCover()
   })
 
-  ipcMain.handle("manualOperation/action/robot/closeWireCover", async() => {
+  ipcMain.handle("manualOperation/action/robot/closeWireCover", async () => {
     return await gpio.ActionRobotCloseWireCover()
   })
 
-  ipcMain.handle("manualOperation/action/robot/installServer", async() => {
+  ipcMain.handle("manualOperation/action/robot/installServer", async () => {
     return await gpio.ActionRobotInstallServer()
   })
 
-  ipcMain.handle("manualOperation/action/robot/uninstallServer", async() => {
+  ipcMain.handle("manualOperation/action/robot/uninstallServer", async () => {
     return await gpio.ActionRobotUninstallServer()
   })
 
-  ipcMain.handle("manualOperation/action/robot/recalibration", async(_, args) => {
+  ipcMain.handle("manualOperation/action/robot/recalibration", async (_, args) => {
     return await gpio.ActionRobotCCDMarkCorrection(args.tankId)
   })
 
-  ipcMain.handle("manualOperation/action/tank/openCover", async(_, args) => {
+  ipcMain.handle("manualOperation/action/tank/openCover", async (_, args) => {
     try {
       console.log("[ DEBUG ]", process.env.VUE_APP_API_HOST, process.env.VUE_APP_API_PORT, process.env.VUE_APP_API_TOKEN)
       const headers = {
@@ -241,7 +247,7 @@ const manualOperation = (ipcMain, gpio) => {
       }
       const response = await axios.post(
         `http://${process.env.VUE_APP_API_HOST}:${process.env.VUE_APP_API_PORT}/api/agents/tank${args.tankId}/plc/action/cover`,
-        { action: "open"},
+        { action: "open" },
         { headers: headers, timeout: 30000 },
       )
       if (response.data.status === "success")
@@ -254,7 +260,7 @@ const manualOperation = (ipcMain, gpio) => {
     return false
   })
 
-  ipcMain.handle("manualOperation/action/tank/closeCover", async(_, args) => {
+  ipcMain.handle("manualOperation/action/tank/closeCover", async (_, args) => {
     try {
       const headers = {
         'Content-Type': 'application/json',
@@ -262,7 +268,7 @@ const manualOperation = (ipcMain, gpio) => {
       }
       const response = await axios.post(
         `http://${process.env.VUE_APP_API_HOST}:${process.env.VUE_APP_API_PORT}/api/agents/tank${args.tankId}/plc/action/cover`,
-        { action: "close"},
+        { action: "close" },
         { headers: headers, timeout: 30000 },
       )
       if (response.data.status === "success")
@@ -277,7 +283,7 @@ const manualOperation = (ipcMain, gpio) => {
 }
 
 const issueReport = (ipcMain, logFilename) => {
-  ipcMain.handle("issueReport/get", async() => {
+  ipcMain.handle("issueReport/get", async () => {
     let returnJson = []
 
     const fileStream = fs.createReadStream(logFilename)
@@ -300,39 +306,39 @@ const issueReport = (ipcMain, logFilename) => {
 }
 
 const dockServerHandler = (ipcMain, gpio) => {
-  ipcMain.handle("dockServer/getMMSlots", async() => {
+  ipcMain.handle("dockServer/getMMSlots", async () => {
     return await gpio.GetMMSlotsStatus()
   })
 
-  ipcMain.handle("dockServer/getTankSlots", async() => {
+  ipcMain.handle("dockServer/getTankSlots", async () => {
     return await gpio.GetTankSlotsStatus()
   })
 
-  ipcMain.handle("dockServer/check/robotIsEmpty", async() => {
+  ipcMain.handle("dockServer/check/robotIsEmpty", async () => {
     return await gpio.GetRobotIsEmpty()
   })
 
-  ipcMain.handle("dockServer/action/robot/move2slot", async(_, args) => {
+  ipcMain.handle("dockServer/action/robot/move2slot", async (_, args) => {
     return await gpio.ActionRobotMove2Slot(args.slotId)
   })
 
-  ipcMain.handle("dockServer/action/robot/uninstallServer", async() => {
+  ipcMain.handle("dockServer/action/robot/uninstallServer", async () => {
     return await gpio.ActionRobotUninstallServer()
   })
 
-  ipcMain.handle("dockServer/action/robot/installServer", async() => {
+  ipcMain.handle("dockServer/action/robot/installServer", async () => {
     return await gpio.ActionRobotInstallServer()
   })
 
-  ipcMain.handle("dockServer/action/robot/return2origin", async() => {
+  ipcMain.handle("dockServer/action/robot/return2origin", async () => {
     return await gpio.ActionRobotReturn2Origin()
   })
 
-  ipcMain.handle("dockServer/action/robot/recalibration", async(_, args) => {
+  ipcMain.handle("dockServer/action/robot/recalibration", async (_, args) => {
     return await gpio.ActionRobotCCDMarkCorrection(args.tankId)
   })
 
-  ipcMain.handle("dockServer/action/robot/scanTankSlots", async() => {
+  ipcMain.handle("dockServer/action/robot/scanTankSlots", async () => {
     return await gpio.ActionRobotScanTankSlots()
   })
 }

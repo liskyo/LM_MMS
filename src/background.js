@@ -13,8 +13,6 @@ protocol.registerSchemesAsPrivileged([
 ])
 
 async function createWindow() {
-  mainFunction(isDevelopment, app, ipcMain)
-
   // Create the browser window.
   const win = new BrowserWindow({
     width: 1280,
@@ -38,6 +36,9 @@ async function createWindow() {
     // Load the index.html when not in development
     win.loadURL('app://./index.html')
   }
+
+  // Initialize main function after window is created
+  mainFunction(isDevelopment, app, ipcMain, win)
 }
 
 // Quit when all windows are closed.
